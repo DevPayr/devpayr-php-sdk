@@ -797,6 +797,3 @@ We will respond promptly to investigate, validate, and address the issue.
 We appreciate ethical researchers and developers who help make the platform safer for everyone. Your report will be treated with respect, and we may acknowledge your contribution (unless you prefer otherwise).
 
 Thank you for helping keep DevPayr secure.
-#   d e v p a y r - p h p - s d k  
- #   d e v p a y r - p h p - s d k  
- 
