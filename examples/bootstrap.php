@@ -1,5 +1,7 @@
 <?php
 
+// examples/bootstrap.php
+
 require __DIR__ . '/../vendor/autoload.php';
 
 use DevPayr\DevPayr;

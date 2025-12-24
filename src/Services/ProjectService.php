@@ -86,8 +86,8 @@ class ProjectService
      * @return array
      * @throws ApiResponseException|DevPayrException
      */
-    public function list(): array
+    public function list(array $query = []): array
     {
-        return $this->http->get("projects");
+        return $this->http->get("projects", $query);
     }
 }

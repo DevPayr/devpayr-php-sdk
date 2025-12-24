@@ -31,9 +31,9 @@ class DomainService
      *
      * @throws ApiResponseException|DevPayrException
      */
-    public function list(string|int $projectId): array
+    public function list(string|int $projectId, array $query = []): array
     {
-        return $this->http->get("project/{$projectId}/domains");
+        return $this->http->get("project/{$projectId}/domains", $query);
     }
 
     /**

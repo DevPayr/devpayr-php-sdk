@@ -32,9 +32,9 @@ class LicenseService
      *
      * @throws ApiResponseException|DevPayrException
      */
-    public function list(string|int $projectId): array
+    public function list(string|int $projectId, array $query = []): array
     {
-        return $this->http->get("project/{$projectId}/licenses");
+        return $this->http->get("project/{$projectId}/licenses", $query);
     }
 
     /**

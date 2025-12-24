@@ -70,19 +70,30 @@ class HttpClient
             $headers = array_merge($headers, LicenseAuth::headers($this->config));
         }
 
+        $domain = $this->config->get('domain');
+        if (is_string($domain) && trim($domain) !== '') {
+            $headers['X-Devpayr-Domain'] = trim($domain);
+        }
+
         $options['headers'] = $headers;
 
         // Append `include` and `action` from config to query if set
         $query = $options['query'] ?? [];
-        if ($this->config->get('injectables')) {
-            $query['include'] = $this->config->get('injectables') ? 'injectables' : null;
+
+        $globalQuery = $this->config->get('query', []);
+        if (is_array($globalQuery) && !empty($globalQuery)) {
+            $query = array_replace($globalQuery, $query);
         }
 
-        if ($this->config->get('action')) {
+        if ($this->config->get('injectables') && !isset($query['include'])) {
+            $query['include'] = 'injectables';
+        }
+
+        if ($this->config->get('action') && !isset($query['action'])) {
             $query['action'] = $this->config->get('action');
         }
 
-        if ($this->config->get('per_page')) {
+        if ($this->config->get('per_page') && !isset($query['per_page'])) {
             $query['per_page'] = $this->config->get('per_page');
         }
 
@@ -125,7 +136,7 @@ class HttpClient
      */
     public function get(string $uri, array $query = [], array $extra = []): array
     {
-        return $this->request('GET', $uri, array_merge_recursive(['query' => $query], $extra));
+        return $this->request('GET', $uri, array_replace_recursive(['query' => $query], $extra));
     }
 
     /**
@@ -135,7 +146,7 @@ class HttpClient
      */
     public function post(string $uri, array $data = [], array $extra = []): array
     {
-        return $this->request('POST', $uri, array_merge_recursive(['json' => $data], $extra));
+        return $this->request('POST', $uri, array_replace_recursive(['json' => $data], $extra));
     }
 
     /**
@@ -145,7 +156,7 @@ class HttpClient
      */
     public function put(string $uri, array $data = [], array $extra = []): array
     {
-        return $this->request('PUT', $uri, array_merge_recursive(['json' => $data], $extra));
+        return $this->request('PUT', $uri, array_replace_recursive(['json' => $data], $extra));
     }
 
     /**
@@ -155,7 +166,7 @@ class HttpClient
      */
     public function patch(string $uri, array $data = [], array $extra = []): array
     {
-        return $this->request('PATCH', $uri, array_merge_recursive(['json' => $data], $extra));
+        return $this->request('PATCH', $uri, array_replace_recursive(['json' => $data], $extra));
     }
 
     /**
@@ -165,6 +176,6 @@ class HttpClient
      */
     public function delete(string $uri, array $query = [], array $extra = []): array
     {
-        return $this->request('DELETE', $uri, array_merge_recursive(['query' => $query], $extra));
+        return $this->request('DELETE', $uri, array_replace_recursive(['query' => $query], $extra));
     }
 }

@@ -14,7 +14,7 @@ use DevPayr\Services\PaymentService;
 /**
  * Class DevPayr
  *
- * 🔹 Primary entry point to the SDK.
+ * Primary entry point to the SDK.
  * Handles runtime license validation, injectable processing, and provides access to all core services.
  */
 class DevPayr
@@ -25,9 +25,9 @@ class DevPayr
     protected static Config $config;
 
     /**
-     * 🔧 Bootstraps the SDK — perform runtime validation, set config, and optionally load injectables.
+     * Bootstraps the SDK: sets config, performs runtime validation (license mode), and invokes onReady.
      *
-     * @param array $config Configuration options (license key, base URL, callbacks, etc.)
+     * @param array $config Configuration options
      * @return void
      * @throws DevPayrException
      */
@@ -35,76 +35,81 @@ class DevPayr
     {
         self::$config = new Config($config);
 
+        $data = null;
+
         try {
-            // Run runtime license validation and fetch injectables (if enabled)
             if (self::$config->isLicenseMode()) {
                 $validator = new RuntimeValidator(self::$config);
                 $data = $validator->validate();
             }
 
-            // Call optional user-defined callback after successful boot
-            if (is_callable($callback = self::$config->get('onReady'))) {
+            $callback = self::$config->get('onReady');
+            if (is_callable($callback)) {
                 $callback($data);
             }
-
         } catch (DevPayrException $e) {
-            // Handle DevPayr-specific exceptions (e.g. license invalid)
-            self::handleFailure($e->getMessage(), $config);
+            self::handleFailure($e->getMessage());
         } catch (\Throwable $e) {
-            // Handle all other errors gracefully
-            self::handleFailure("Unexpected error: " . $e->getMessage(), $config);
+            self::handleFailure('Unexpected error: ' . $e->getMessage());
         }
     }
 
     /**
-     * Handle license validation failure or SDK bootstrap failure.
+     * Handle SDK bootstrap failure or license validation failure.
      *
-     * Supports different failure modes: 'die', 'log', 'redirect', or 'silent'.
+     * Supported modes:
+     * - redirect: redirects to redirectUrl (or default upgrade URL)
+     * - log: logs error message using error_log
+     * - silent: no output
+     * - modal: prints HTML modal/view and exits
      *
      * @param string $message The error message
-     * @param array $config The original SDK config
      * @return void
      */
-    protected static function handleFailure(string $message, array $config): void
+    protected static function handleFailure(string $message): void
     {
+        $mode = self::$config->get('invalidBehavior', 'modal');
+        $finalMessage = self::$config->get('customInvalidMessage', $message) ?? $message;
 
-        $mode = $config['invalidBehavior'] ?? 'modal';
-        $finalMessage = $config['customInvalidMessage'] ?? $message;
+        if ($mode === 'redirect') {
+            $target = self::$config->get('redirectUrl', 'https://devpayr.com/upgrade') ?? 'https://devpayr.com/upgrade';
 
-        switch ($mode) {
-            case 'redirect':
-                $target = $config['redirectUrl'] ?? 'https://devpayr.com/upgrade';
-                header("Location: {$target}");
+            if (!headers_sent()) {
+                header('Location: ' . $target);
                 exit;
+            }
 
-            case 'log':
-                error_log("[DevPayr] Invalid license: {$finalMessage}");
-                break;
-
-            case 'silent':
-                // Do nothing silently
-                break;
-
-            case 'modal':
-            default:
-                $customView = $config['customInvalidView'] ?? null;
-
-            $defaultPath = __DIR__. '/resources/views/devpayr/unlicensed.html';
-
-            $htmlPath = $customView ?? $defaultPath;
-
-
-                if (file_exists($htmlPath)) {
-                    $html = file_get_contents($htmlPath);
-                    $output = str_replace('{{message}}', htmlspecialchars($finalMessage), $html);
-                    echo $output;
-                } else {
-                    header('Content-Type: text/html; charset=utf-8');
-                    echo "<h1>⚠️ Unlicensed Software</h1><p>{$finalMessage}</p>";
-                }
-
-                exit;
+            error_log('[DevPayr] Redirect failed because headers were already sent. Target: ' . $target);
+            return;
         }
+
+        if ($mode === 'log') {
+            error_log('[DevPayr] Invalid license: ' . $finalMessage);
+            return;
+        }
+
+        if ($mode === 'silent') {
+            return;
+        }
+
+        $customView = self::$config->get('customInvalidView', null);
+        $defaultPath = __DIR__ . '/resources/views/devpayr/unlicensed.html';
+        $htmlPath = is_string($customView) && trim($customView) !== '' ? $customView : $defaultPath;
+
+        $escaped = htmlspecialchars((string) $finalMessage, ENT_QUOTES, 'UTF-8');
+
+        if (is_string($htmlPath) && file_exists($htmlPath)) {
+            $html = (string) file_get_contents($htmlPath);
+            echo str_replace('{{message}}', $escaped, $html);
+            exit;
+        }
+
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        echo '<h1>Unlicensed Software</h1><p>' . $escaped . '</p>';
+        exit;
     }
 
     /**
@@ -118,7 +123,7 @@ class DevPayr
     }
 
     // ------------------------------------------------------------------
-    // 🔹 Core Services – accessible via DevPayr::serviceName() methods
+    // Core Services – accessible via DevPayr::serviceName() methods
     // ------------------------------------------------------------------
 
     /**
@@ -166,7 +171,7 @@ class DevPayr
     }
 
     /**
-     * 💵 Payment Status API (check if license/project has been paid for)
+     * Payment Status API (check if license/project has been paid for)
      *
      * @return PaymentService
      * @throws DevPayrException

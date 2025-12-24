@@ -31,9 +31,9 @@ class InjectableService
      *
      * @throws ApiResponseException|DevPayrException
      */
-    public function list(string|int $projectId): array
+    public function list(string|int $projectId, array $query = []): array
     {
-        return $this->http->get("project/{$projectId}/injectables");
+        return $this->http->get("project/{$projectId}/injectables", $query);
     }
 
     /**
